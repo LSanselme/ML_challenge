@@ -1,0 +1,74 @@
+#!/usr/bin/env python
+
+execfile('all_imports.py')
+
+if in_ipython():
+    args.use_cache_data = True
+    args.use_cache_trainingset = True
+    args.verbose = True
+    args.test = True
+    args.plot = True
+# Reading the modifdata
+#######################
+
+(prediction, sites_id, poids_orig, temps, charg_orig, descr, charg, poids, temps) \
+    =  mydata(args.verbose, args.use_cache_data, args.test)
+
+# Training
+#######################
+
+training_sets = {}
+fonctions = {}
+for iden in sites_id:
+    fonction = pr.training(iden, charg, temps,
+                           args.use_cache_trainingset, args.test, args.verbose)
+    fonctions[iden] = fonction 
+
+# Predicting
+#######################
+
+for iden in sites_id:
+    prediction = pr.make_prediction(iden, charg, temps, prediction, fonctions, args.verbose)
+    print('Computing the predictions for '+iden+': Done.')
+
+# Checking/saving
+#######################
+
+if args.test:
+    reality = pr.fill_reality(prediction, charg_orig, args.compute_reality)
+    R, P, W, N1 = pr.calcul_performance(reality, prediction, poids, selec='all')
+else:
+    prediction.to_csv('results/'+str(time.time())+'_ML.csv', sep=';', index=False)
+
+if args.test:
+    my_perfs = {}
+    for iden in sites_id:
+        print(iden)
+        N1 = pr.calcul_performance(reality, prediction, poids, selec=iden)[3]
+        my_perfs[iden] = N1
+        if args.plot:
+            aplotter = charg_orig.T.ix[iden][pd.notnull(charg.T.ix[iden])]
+            toto = prediction[prediction['ID'] == iden]['ESTIMATION']
+            toto.index= pd.to_datetime(prediction[prediction['ID'] == iden]['DATE'], format='%d/%m/%Y %H:%M')
+            mpl.close()
+            mytitle = iden+' : '+np.array(descr['Descr'][descr['identifiant']==iden])[0].decode('utf-8')+\
+                  '.   Contribution a N1 :'.decode('utf-8')+str(N1)[0:5]+'%'.decode('utf-8')
+            monplot = aplotter.plot(title=mytitle, figsize=(22, 10))
+            toto.plot(ax=monplot, color='r')
+            legend()
+            mpl.savefig('plots/'+iden+'_trees.png')
+
+
+
+if in_ipython():
+    my_perfs0 = {'ID01': 4.9418270043069796, 'ID02': 19.620348149386615, 'ID03': 3.568941264157683, 'ID04': 12.204466906567117, 'ID05': 6.2830707459019708, 'ID06': 16.589959961867905, 'ID07': 29.062229952987522, 'ID08': 15.129585529099529, 'ID09': 13.29864718802402, 'ID10': 25.3233049933615, 'ID11': 33.055594893186388, 'ID12': 24.810437461984609, 'ID13': 18.12459171205834, 'ID14': 8.0371766402666491, 'ID15': 23.064744114137859, 'ID16': 27.911982592210155, 'ID17': 44.689730857287543, 'ID18': 23.297013638731098, 'ID19': 21.129401160207955, 'ID20': 12.966038165469239, 'ID21': 17.51319622103491, 'ID22': 9.1559739728730865, 'ID23': 12.516688620394792, 'ID24': 36.119263067754133, 'ID25': 8.8512946745336087, 'ID26': 53.416561480443747, 'ID27': 17.648559359397119, 'ID28': 17.631443935243134, 'ID29': 7.6238610890495409, 'ID30': 23.487045977614603, 'ID31': 11.83450111471241, 'ID32': 26.286885611232929, 'ID33': 50.836454232755948, 'ID34': 29.435831405826345, 'ID35': 21.304038802696319, 'ID36': 7.1124546833730138, 'ID37': 12.082864966496826, 'ID38': 11.590169144469943, 'ID39': 17.791900116686616, 'ID40': 12.863079496165547, 'ID41': 7.4618687875400118, 'ID42': 9.1621610860399425, 'ID43': 10.796295495560837}
+    my_perfs0_liste = []
+    my_perfs_liste = []
+    for iden in sites_id:
+        my_perfs0_liste.append(my_perfs0[iden])
+        my_perfs_liste.append(my_perfs[iden])
+    
+    plot(my_perfs0_liste,'bo-')
+    plot(my_perfs_liste,'ro-')
+
+

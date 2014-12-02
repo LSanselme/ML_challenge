@@ -1,0 +1,11 @@
+#!/bin/bash
+
+function cleanup()
+{
+    find ${1} -name "*pyc" -exec rm {} \;
+    find ${1} -name "*~" -exec rm {} \;
+}
+
+cleanup mylecture
+cleanup myprediction
+cleanup ./
